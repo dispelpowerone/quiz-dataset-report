@@ -60,7 +60,7 @@ uv run python -m quiz_dataset_report --list-apps
 |------|-------------|
 | `-c, --config PATH` | Config file (default `config.yaml`). |
 | `-d, --days N` | Reporting window; overrides `report.days`. |
-| `-a, --app KEY` | Limit to an app by name or domain (repeatable). |
+| `-a, --app KEY` (alias `--domain`) | Limit to an app by name or domain (repeatable). |
 | `-o, --output-dir DIR` | Also write each report's HTML to `DIR/<domain>.html`. |
 | `--dry-run` | Build reports but do not send email. |
 | `--include-empty` | Also process/send apps with no events in the window. |

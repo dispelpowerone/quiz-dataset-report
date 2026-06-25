@@ -35,10 +35,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument(
         "-a",
         "--app",
+        "--domain",
         action="append",
         dest="apps",
         metavar="NAME_OR_DOMAIN",
-        help="Limit to this app (repeatable). Default: all enabled apps.",
+        help="Limit to this app by name or domain (repeatable). "
+        "Default: all enabled apps.",
     )
     p.add_argument(
         "--dry-run",
