@@ -47,7 +47,7 @@ languages:
 
 # Single global maintainer list; every per-app report is emailed to all of them.
 maintainers:
-  - "maintainer@rapyuta-robotics.com"
+  - "maintainer@gmail.com"
 
 # One report is generated and emailed per enabled app.
 apps:

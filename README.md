@@ -29,7 +29,7 @@ SMTP credentials are read from the environment (referenced via `${VAR}` in the
 config), so they never live in the file:
 
 ```bash
-export SMTP_USERNAME="you@rapyuta-robotics.com"
+export SMTP_USERNAME="you@gmail.com"
 export SMTP_PASSWORD="your-16-char-google-app-password"
 ```
 
