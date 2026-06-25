@@ -1,0 +1,71 @@
+# quiz-dataset-report configuration.
+#
+# Copy to config.yaml and fill in the maintainer list and SMTP credentials.
+# ${VAR} placeholders are expanded from environment variables at load time, so
+# keep secrets in the environment rather than in this file.
+
+clickhouse:
+  url: "http://pi.local:8123/"
+  database: "firebase"
+  table: "analytics_events"
+  user: "default"
+  password: ""
+  timeout_seconds: 60
+
+api:
+  base_url: "https://pi.local/api"
+  verify_tls: false          # pi.local uses a self-signed cert
+  timeout_seconds: 30
+  # Question images are served per-domain. {domain} and {image} are filled in.
+  # Set to "" to show the image filename instead of embedding it.
+  image_url_template: "https://pi.local/api/images/{domain}/{image}"
+
+# Generic SMTP. Defaults target Google Workspace / Gmail; use an App Password
+# (Google account -> Security -> App passwords), not your login password.
+smtp:
+  host: "smtp.gmail.com"
+  port: 587
+  use_starttls: true
+  username: "${SMTP_USERNAME}"
+  password: "${SMTP_PASSWORD}"
+  from_address: "${SMTP_USERNAME}"
+
+report:
+  days: 30                   # default window; override with --days
+  event_prefix: "custom_report_"
+
+# telemetry language_id -> API localization code. Adjust if ids differ.
+languages:
+  1: EN
+  2: FR
+  3: ZH
+  4: ES
+  5: RU
+  6: FA
+  7: PA
+  8: PT
+
+# Single global maintainer list; every per-app report is emailed to all of them.
+maintainers:
+  - "maintainer@rapyuta-robotics.com"
+
+# One report is generated and emailed per enabled app.
+apps:
+  - name: "Ontario"
+    domain: "on"
+    dataset: "analytics_347566445"
+  - name: "British Columbia"
+    domain: "bc"
+    dataset: "analytics_406244031"
+  - name: "New York"
+    domain: "ny"
+    dataset: "analytics_407173704"
+  - name: "Florida"
+    domain: "fl"
+    dataset: "analytics_458007404"
+  - name: "California"
+    domain: "ca"
+    dataset: "analytics_453116856"
+  - name: "Texas"
+    domain: "tx"
+    dataset: "analytics_447306471"

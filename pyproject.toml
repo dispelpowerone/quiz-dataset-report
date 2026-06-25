@@ -1,0 +1,32 @@
+[project]
+name = "quiz-dataset-report"
+version = "0.1.0"
+description = "Build and email HTML reports of quiz user-report telemetry events."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "clickhouse-connect>=0.7",
+    "httpx>=0.27",
+    "jinja2>=3.1",
+    "pydantic>=2.6",
+    "pyyaml>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=24.0",
+    "pytest>=8.0",
+]
+
+# This project is run as a module (`uv run python -m quiz_dataset_report`),
+# not installed as a package, so no build backend is configured.
+[tool.uv]
+package = false
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
