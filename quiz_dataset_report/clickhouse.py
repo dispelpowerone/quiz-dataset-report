@@ -20,13 +20,15 @@ SELECT
     event_name AS event_name,
     toInt64(JSONExtractFloat(event_params_json, 'question_id')) AS question_id,
     toInt32(JSONExtractFloat(event_params_json, 'language_id')) AS language_id,
+    user_pseudo_id AS user_pseudo_id,
+    toInt64(JSONExtractFloat(event_params_json, 'ga_session_id')) AS session_id,
     count() AS count
 FROM {database:Identifier}.{table:Identifier}
 WHERE import_dataset = {dataset:String}
   AND event_name LIKE {pattern:String}
   AND event_date >= today() - {days:UInt32}
   AND JSONExtractFloat(event_params_json, 'question_id') > 0
-GROUP BY event_name, question_id, language_id
+GROUP BY event_name, question_id, language_id, user_pseudo_id, session_id
 ORDER BY count DESC
 """
 
@@ -63,7 +65,9 @@ class ClickHouseClient:
                 event_name=row[0],
                 question_id=int(row[1]),
                 language_id=int(row[2]),
-                count=int(row[3]),
+                user_pseudo_id=row[3],
+                session_id=int(row[4]),
+                count=int(row[5]),
             )
             for row in result.result_rows
         ]

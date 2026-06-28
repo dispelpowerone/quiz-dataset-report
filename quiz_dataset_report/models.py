@@ -12,7 +12,14 @@ class TelemetryRow:
     event_name: str
     question_id: int
     language_id: int
+    user_pseudo_id: str
+    session_id: int
     count: int
+
+    @property
+    def report_key(self) -> tuple[str, int]:
+        """Identity of a single report: one user within one session."""
+        return (self.user_pseudo_id, self.session_id)
 
     @property
     def category(self) -> str:
@@ -46,17 +53,27 @@ class ResolvedQuestion:
 
 @dataclass
 class IssueReport:
-    """Aggregated reports of one issue type for one question."""
+    """Aggregated reports of one issue type for one question.
+
+    Counts are distinct reports (user+session) that flagged this issue type, so a
+    user who reports the same issue twice in a session counts once. Note that
+    issue counts can sum to more than the question's report_count, because one
+    report may flag several issue types.
+    """
 
     category: str
-    count: int = 0  # non-reset reports
-    reset_count: int = 0  # corresponding reset events
+    count: int = 0  # distinct (non-reset) reports flagging this issue
+    reset_count: int = 0  # distinct reset reports for this issue
     by_language: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
 class QuestionReport:
-    """All reported issues for a single question, with language breakdown."""
+    """All reported issues for a single question, with language breakdown.
+
+    report_count/reset_count are distinct reports, where a report is one user
+    within one session (collapsing the multiple events a single report emits).
+    """
 
     question_id: int
     resolved: bool
@@ -64,18 +81,11 @@ class QuestionReport:
     question_text: str
     image: str | None
     image_url: str | None
+    report_count: int = 0
+    reset_count: int = 0
     answers: list[AnswerInfo] = field(default_factory=list)
     issues: list[IssueReport] = field(default_factory=list)
     languages: dict[str, int] = field(default_factory=dict)
-
-    @property
-    def report_count(self) -> int:
-        """Number of (non-reset) user reports; questions are sorted by this."""
-        return sum(i.count for i in self.issues)
-
-    @property
-    def reset_count(self) -> int:
-        return sum(i.reset_count for i in self.issues)
 
 
 @dataclass

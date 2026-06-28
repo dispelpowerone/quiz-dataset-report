@@ -9,6 +9,11 @@ one report per app.
 Each question card shows the English question text, its image, all answers
 (correct one marked), and a per-issue table broken down by language.
 
+A **report** is one user within one session: the multiple events a single report
+emits (e.g. flagging both the question and its image) are collapsed into one
+report. Per-issue counts can therefore sum to more than a question's report
+count, since one report may flag several issue types.
+
 ## Requirements
 
 - Python ≥ 3.11, [`uv`](https://docs.astral.sh/uv/)

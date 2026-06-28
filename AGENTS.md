@@ -54,6 +54,10 @@ resolver groups by `question_id`, splits reset vs non-reset events, maps
   `analytics_events`, user `default` (empty password). Native port 9000 is also
   open but we use the HTTP client deliberately. Report events are
   `custom_report_*`; `custom_report_reset_*` are corrections, tracked separately.
+  A **report** is deduplicated to one `(question, user_pseudo_id, ga_session_id)`
+  — the app emits one event per issue type, so a single user reporting
+  question+image in a session is ONE report, not two. Dedup happens in
+  `resolver._summarize`; per-issue counts can exceed a question's report_count.
 - **Quiz API**: `https://pi.local/api` (docs `/api/docs`, spec `/api/openapi.json`).
   Self-signed cert → `api.verify_tls: false`. Endpoints return
   `{error_code, payload}`; `error_code != 0` is an error.

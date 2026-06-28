@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
+from dataclasses import dataclass, field
 
 from .config import Config
 from .models import (
@@ -77,6 +79,50 @@ def _image_url(image: str | None, domain: str, template: str) -> str | None:
     return template.format(domain=domain, image=image)
 
 
+@dataclass
+class _Report:
+    """One distinct report (user+session): the issue types and languages it spans."""
+
+    categories: set[str] = field(default_factory=set)
+    languages: set[str] = field(default_factory=set)
+
+
+def _summarize(
+    reports: dict[tuple[str, int], _Report],
+    resets: dict[tuple[str, int], _Report],
+) -> tuple[int, int, dict[str, int], list[IssueReport]]:
+    """Turn deduped reports into counts, language totals, and per-issue rows."""
+    # languages: number of distinct reports using each language
+    languages: dict[str, int] = {}
+    for r in reports.values():
+        for lang in r.languages:
+            languages[lang] = languages.get(lang, 0) + 1
+
+    categories = {c for r in reports.values() for c in r.categories}
+    categories |= {c for r in resets.values() for c in r.categories}
+
+    issues: list[IssueReport] = []
+    for cat in categories:
+        by_language: dict[str, int] = {}
+        count = 0
+        for r in reports.values():
+            if cat in r.categories:
+                count += 1
+                for lang in r.languages:
+                    by_language[lang] = by_language.get(lang, 0) + 1
+        reset_count = sum(1 for r in resets.values() if cat in r.categories)
+        issues.append(
+            IssueReport(
+                category=cat,
+                count=count,
+                reset_count=reset_count,
+                by_language=by_language,
+            )
+        )
+    issues.sort(key=lambda i: (i.count + i.reset_count), reverse=True)
+    return len(reports), len(resets), languages, issues
+
+
 def build_app_report(
     *,
     app_name: str,
@@ -93,19 +139,23 @@ def build_app_report(
     languages = config.languages
     image_template = config.api.image_url_template
 
-    # question_id -> {category -> IssueReport}
     by_question: dict[int, QuestionReport] = {}
     unresolved: set[int] = set()
 
+    # Per question, group events into distinct reports keyed by (user, session).
+    # Each report tracks the issue types and languages it spans. A report that
+    # flags question + image is one report covering two issue types.
+    # qid -> report_key -> {"cats": set, "langs": set}
+    reports: dict[int, dict[tuple[str, int], _Report]] = defaultdict(dict)
+    resets: dict[int, dict[tuple[str, int], _Report]] = defaultdict(dict)
+
     for row in rows:
         qid = row.question_id
-        resolved = index.get(qid)
-        if resolved is None:
-            unresolved.add(qid)
-
-        qr = by_question.get(qid)
-        if qr is None:
-            qr = QuestionReport(
+        if qid not in by_question:
+            resolved = index.get(qid)
+            if resolved is None:
+                unresolved.add(qid)
+            by_question[qid] = QuestionReport(
                 question_id=qid,
                 resolved=resolved is not None,
                 test_title=resolved.test_title if resolved else "",
@@ -120,28 +170,24 @@ def build_app_report(
                 ),
                 answers=list(resolved.answers) if resolved else [],
             )
-            by_question[qid] = qr
 
-        # find or create the IssueReport for this category
-        issue = next((i for i in qr.issues if i.category == row.category), None)
-        if issue is None:
-            issue = IssueReport(category=row.category)
-            qr.issues.append(issue)
+        bucket = resets[qid] if row.is_reset else reports[qid]
+        entry = bucket.get(row.report_key)
+        if entry is None:
+            entry = _Report()
+            bucket[row.report_key] = entry
+        entry.categories.add(row.category)
+        if not row.is_reset:
+            entry.languages.add(languages.get(row.language_id, f"#{row.language_id}"))
 
-        lang_label = languages.get(row.language_id, f"#{row.language_id}")
-        if row.is_reset:
-            issue.reset_count += row.count
-        else:
-            issue.count += row.count
-            issue.by_language[lang_label] = (
-                issue.by_language.get(lang_label, 0) + row.count
-            )
-            qr.languages[lang_label] = qr.languages.get(lang_label, 0) + row.count
+    questions: list[QuestionReport] = []
+    for qid, qr in by_question.items():
+        qr.report_count, qr.reset_count, qr.languages, qr.issues = _summarize(
+            reports.get(qid, {}), resets.get(qid, {})
+        )
+        questions.append(qr)
 
-    questions = list(by_question.values())
-    for qr in questions:
-        qr.issues.sort(key=lambda i: i.count + i.reset_count, reverse=True)
-    # sort by number of (non-reset) reports, then resets, then id for stability
+    # sort by number of (deduped) reports, then resets, then id for stability
     questions.sort(
         key=lambda q: (q.report_count, q.reset_count, -q.question_id), reverse=True
     )

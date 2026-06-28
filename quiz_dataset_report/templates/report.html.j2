@@ -57,6 +57,10 @@
     {%- if report.unresolved_question_ids %}
     &middot; {{ report.unresolved_question_ids | length }} unresolved question id(s)
     {%- endif %}
+    <div style="color:#6b7280;font-size:12px;margin-top:6px;">
+      A report is one user in one session; a single report may flag several
+      issue types, so per-issue counts can exceed the report count.
+    </div>
   </div>
 
   {% for q in report.questions %}
