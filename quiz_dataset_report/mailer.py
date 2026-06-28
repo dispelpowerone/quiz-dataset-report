@@ -7,6 +7,7 @@ import smtplib
 from email.message import EmailMessage
 
 from .config import SmtpConfig
+from .images import InlineImage
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,14 @@ class Mailer:
     def __init__(self, config: SmtpConfig) -> None:
         self._config = config
 
-    def send_html(self, *, to: list[str], subject: str, html: str) -> None:
+    def send_html(
+        self,
+        *,
+        to: list[str],
+        subject: str,
+        html: str,
+        inline_images: list[InlineImage] | None = None,
+    ) -> None:
         if not to:
             raise ValueError("No recipients configured")
         if not self._config.from_address:
@@ -31,14 +39,36 @@ class Mailer:
         )
         msg.add_alternative(html, subtype="html")
 
+        if inline_images:
+            # The HTML alternative is the last payload; attach images to it as
+            # related parts so cid: references resolve inside the message.
+            html_part = msg.get_payload()[-1]
+            for img in inline_images:
+                html_part.add_related(
+                    img.data,
+                    maintype=img.maintype,
+                    subtype=img.subtype,
+                    cid=f"<{img.cid}>",
+                )
+
+        size_mb = len(bytes(msg)) / 1_000_000
         logger.info(
-            "Sending '%s' to %s via %s:%d",
+            "Sending '%s' (%.1f MB) to %s via %s:%d",
             subject,
+            size_mb,
             to,
             self._config.host,
             self._config.port,
         )
-        with smtplib.SMTP(self._config.host, self._config.port, timeout=30) as smtp:
+        if size_mb > 25:
+            logger.warning(
+                "Message is %.1f MB, above Gmail's 25 MB limit; it may be "
+                "rejected. Consider --no-embed-images.",
+                size_mb,
+            )
+        with smtplib.SMTP(
+            self._config.host, self._config.port, timeout=self._config.timeout_seconds
+        ) as smtp:
             smtp.ehlo()
             if self._config.use_starttls:
                 smtp.starttls()

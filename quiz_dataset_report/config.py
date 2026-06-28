@@ -81,11 +81,23 @@ class SmtpConfig(BaseModel):
     username: str | None = None
     password: str | None = None
     from_address: str = ""
+    # Generous default: embedded-image emails can be several MB and slow to
+    # upload, which would trip a short socket timeout mid-send.
+    timeout_seconds: int = 120
 
 
 class ReportConfig(BaseModel):
     days: int = 30
     event_prefix: str = "custom_report_"
+    # Download question images and embed them inline in the email so they render
+    # even when clients block remote images. Disable with --no-embed-images.
+    embed_images: bool = True
+    # Downscale/re-encode embedded images to keep the email small. Images wider
+    # than image_max_width are resized; opaque images are re-encoded as JPEG at
+    # image_jpeg_quality (images with transparency stay PNG). Set max_width to 0
+    # to disable downscaling and embed originals.
+    image_max_width: int = 600
+    image_jpeg_quality: int = 80
 
 
 class AppConfig(BaseModel):

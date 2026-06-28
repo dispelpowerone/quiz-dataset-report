@@ -10,6 +10,7 @@ from pathlib import Path
 
 from .clickhouse import ClickHouseClient
 from .config import AppConfig, Config, load_config
+from .images import download_and_embed
 from .mailer import Mailer
 from .models import AppReport
 from .quiz_api import QuizApiClient
@@ -57,6 +58,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--include-empty",
         action="store_true",
         help="Also report/send apps with no events in the window.",
+    )
+    p.add_argument(
+        "--no-embed-images",
+        action="store_true",
+        help="Link images by URL instead of embedding them in the email.",
     )
     p.add_argument(
         "--list-apps", action="store_true", help="List configured apps and exit."
@@ -179,11 +185,23 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[dry-run] {summary}")
                 continue
 
+            email_html = html
+            inline_images = None
+            if config.report.embed_images and not args.no_embed_images:
+                email_html, inline_images = download_and_embed(
+                    html,
+                    verify_tls=config.api.verify_tls,
+                    timeout=config.api.timeout_seconds,
+                    max_width=config.report.image_max_width,
+                    jpeg_quality=config.report.image_jpeg_quality,
+                )
+
             try:
                 mailer.send_html(
                     to=config.maintainers,
                     subject=subject_line(report),
-                    html=html,
+                    html=email_html,
+                    inline_images=inline_images,
                 )
                 print(f"[sent] {summary}")
             except Exception:  # noqa: BLE001

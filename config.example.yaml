@@ -29,10 +29,14 @@ smtp:
   username: "${SMTP_USERNAME}"
   password: "${SMTP_PASSWORD}"
   from_address: "${SMTP_USERNAME}"
+  timeout_seconds: 120        # embedded-image emails can be several MB to upload
 
 report:
   days: 30                   # default window; override with --days
   event_prefix: "custom_report_"
+  embed_images: true         # embed images inline; disable with --no-embed-images
+  image_max_width: 600       # downscale wider images (0 = embed originals)
+  image_jpeg_quality: 80     # re-encode quality for opaque images
 
 # telemetry language_id -> API localization code. Adjust if ids differ.
 languages:
